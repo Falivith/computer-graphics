@@ -1,3 +1,7 @@
+class scene {
+
+}
+
 function main(){
     var canvas = document.getElementById("canvas");
     var gl = canvas.getContext("webgl");
@@ -44,6 +48,11 @@ function main(){
 
 }
 
+var translation = [0, 0];
+var width = 100;
+var height = 30;
+var color = [Math.random(), Math.random(), Math.random(), 1];
+
 function drawScene() {
     webglUtils.resizeCanvasToDisplaySize(gl.canvas);
  
@@ -77,3 +86,4 @@ function drawScene() {
     var count = 6;
     gl.drawArrays(primitiveType, offset, count);
   }
+
