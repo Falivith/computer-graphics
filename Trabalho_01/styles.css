@@ -1,0 +1,18 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+}
+
+#canvas {
+    width: 600px;
+    height: 600px;
+}
+
+header {
+    /* Adicione estilos para o cabeçalho, se necessário */
+}

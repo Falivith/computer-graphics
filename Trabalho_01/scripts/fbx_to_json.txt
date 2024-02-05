@@ -1,0 +1,1 @@
+C:\Users\faliv\Downloads\assimp2json-2.0-win32\Release\assimp2json.exe C:\Users\faliv\Desktop\computer-graphics-\Trabalho_01\assets\KayKit_City_Builder_Bits_1.0_FREE\KayKit_City_Builder_Bits_1.0_FREE\Assets\fbx\building_A.fbx C:\Users\faliv\Desktop\computer-graphics-\Trabalho_01\assets\json\building_A.json
