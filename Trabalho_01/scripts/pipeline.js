@@ -1,8 +1,7 @@
 var gl;
 var model;
-const mat4 = glMatrix.mat4;
 
-var init = function () {
+function showElement (url, canvasId) {
 	loadTextResource('./shaders/shaders.vs.glsl', function (vsErr, vsText) {
 		if (vsErr) {
 			alert('Fatal error getting vertex shader (see console)');
@@ -13,7 +12,8 @@ var init = function () {
 					alert('Fatal error getting fragment shader (see console)');
 					console.error(fsErr);
 				} else {
-					loadJSONResource('./assets/json/building_A.json', function (modelErr, modelObj) {
+                    console.log(url);
+					loadJSONResource(url, function (modelErr, modelObj) {
 						if (modelErr) {
 							alert('Fatal error getting model (see console)');
 							console.error(fsErr);
@@ -23,7 +23,7 @@ var init = function () {
 									alert('Fatal error getting texture (see console)');
 									console.error(imgErr);
 								} else { 
-									main(vsText, fsText, modelObj, img);
+									main(vsText, fsText, modelObj, img, canvasId);
 								}
 							});
 						}
@@ -34,10 +34,10 @@ var init = function () {
 	});
 };
 
-var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
+var main = function (vertexShaderText, fragmentShaderText, inputModel, image, canvasId) {
 
-	var canvas = document.getElementById('canvas');
-	gl = canvas.getContext('webgl');
+	var canvas = document.getElementById(canvasId);
+	gl = canvas.getContext('webgl2');
 	model = inputModel;
 
 	if (!gl) {
@@ -92,7 +92,7 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	//
 	// Create buffer
 	//
-
+	
 	var modelVertices = model.meshes[0].vertices;
 	var modelIndices = [].concat.apply([], model.meshes[0].faces);
 	var textureCoords = model.meshes[0].texturecoords[0];
@@ -167,7 +167,7 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	var projMatrix = new Float32Array(16);
 
 	mat4.identity(worldMatrix);
-	mat4.lookAt(viewMatrix, [0, 0, 5], [0, 0, 0], [0, 1, 0]);
+	mat4.lookAt(viewMatrix, [0, 0, 4], [0, 0, 0], [0, 1, 0]);
 	mat4.perspective(projMatrix, glMatrix.glMatrix.toRadian(45), canvas.clientWidth / canvas.clientHeight, 0.1, 1000.0);
 
 	gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
@@ -216,3 +216,4 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	};
 	requestAnimationFrame(loop);
 };
+

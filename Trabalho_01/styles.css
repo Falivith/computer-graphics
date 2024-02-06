@@ -8,11 +8,10 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
-#canvas {
-    width: 600px;
-    height: 600px;
+canvas {
+    width: 700px;
+    height: 700px;
 }
 
 header {
-    /* Adicione estilos para o cabeçalho, se necessário */
 }
