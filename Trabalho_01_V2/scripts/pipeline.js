@@ -1,8 +1,7 @@
 var gl;
 var model;
-const mat4 = glMatrix.mat4;
 
-var init = function () {
+function showElement (url, canvasId) {
 	loadTextResource('./shaders/shaders.vs.glsl', function (vsErr, vsText) {
 		if (vsErr) {
 			alert('Fatal error getting vertex shader (see console)');
@@ -13,7 +12,8 @@ var init = function () {
 					alert('Fatal error getting fragment shader (see console)');
 					console.error(fsErr);
 				} else {
-					loadJSONResource('./assets/json/building_B.json', function (modelErr, modelObj) {
+                    console.log(url);
+					loadJSONResource(url, function (modelErr, modelObj) {
 						if (modelErr) {
 							alert('Fatal error getting model (see console)');
 							console.error(fsErr);
@@ -23,7 +23,7 @@ var init = function () {
 									alert('Fatal error getting texture (see console)');
 									console.error(imgErr);
 								} else { 
-									main(vsText, fsText, modelObj, img);
+									main(vsText, fsText, modelObj, img, canvasId);
 								}
 							});
 						}
@@ -34,10 +34,10 @@ var init = function () {
 	});
 };
 
-var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
+var main = function (vertexShaderText, fragmentShaderText, inputModel, image, canvasId) {
 
-	var canvas = document.getElementById('canvas');
-	gl = canvas.getContext('webgl');
+	var canvas = document.getElementById(canvasId);
+	gl = canvas.getContext('webgl2');
 	model = inputModel;
 
 	if (!gl) {
@@ -83,7 +83,6 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 		console.error('ERROR linking program!', gl.getProgramInfoLog(program));
 		return;
 	}
-
 	gl.validateProgram(program);
 	if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
 		console.error('ERROR validating program!', gl.getProgramInfoLog(program));
@@ -93,11 +92,12 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	//
 	// Create buffer
 	//
-
+	
 	var modelVertices = model.meshes[0].vertices;
 	var modelIndices = [].concat.apply([], model.meshes[0].faces);
 	var textureCoords = model.meshes[0].texturecoords[0];
-	console.log(modelVertices, modelIndices, textureCoords);
+
+	console.log(modelIndices);
 
 	var modelPosBufferObject = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelPosBufferObject);
@@ -112,7 +112,6 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(modelIndices), gl.STATIC_DRAW);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, modelPosBufferObject);
-
 	var positionAttribLocation = gl.getAttribLocation(program, 'vertPosition');
 
 	gl.vertexAttribPointer(
@@ -143,7 +142,6 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	//
 	// Create texture
 	//
-
 	var modelTexture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, modelTexture);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -169,7 +167,7 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	var projMatrix = new Float32Array(16);
 
 	mat4.identity(worldMatrix);
-	mat4.lookAt(viewMatrix, [0, 0, 6], [0, 0, 0], [0, 1, 0]);
+	mat4.lookAt(viewMatrix, [0, 0, 4], [0, 0, 0], [0, 1, 0]);
 	mat4.perspective(projMatrix, glMatrix.glMatrix.toRadian(45), canvas.clientWidth / canvas.clientHeight, 0.1, 1000.0);
 
 	gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
@@ -188,15 +186,13 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	mat4.identity(identityMatrix);
 
 	var translationMatrix = new Float32Array(16);
-	mat4.translate(translationMatrix, identityMatrix, [0, 0, -1.2]);
+	mat4.translate(translationMatrix, identityMatrix, [0, 0, -0.7]);
 
 	var angleX = 4.7;
 	var angleY = 2.4;
 	var angleZ = 1.0;
 	
 	var loop = function () {
-		twgl
-
 		angleY = performance.now() / 1500 / 6 * 2 * Math.PI;
 		mat4.rotate(yRotationMatrix, identityMatrix, angleY, [0, 1, 0])
 		mat4.rotate(xRotationMatrix, identityMatrix, angleX, [1, 0, 0])
@@ -208,7 +204,7 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 
 		gl.uniformMatrix4fv(matWorldUniformLocation, gl.FALSE, worldMatrix);
 
-		gl.clearColor(0.75, 0.5, 0.8, 1.0);
+		gl.clearColor(0.75, 0.85, 0.8, 1.0);
 		gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
 
 		gl.bindTexture(gl.TEXTURE_2D, modelTexture);
@@ -220,3 +216,4 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	};
 	requestAnimationFrame(loop);
 };
+

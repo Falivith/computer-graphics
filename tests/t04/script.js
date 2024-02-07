@@ -10,7 +10,7 @@ function main() {
   // setup GLSL programs
   // compiles shaders, links program, looks up locations
   const programInfo = webglUtils.createProgramInfo(gl, ['vertex-shader-3d', 'fragment-shader-3d']);
-
+  console.log(programInfo);
   // create buffers and fill with data for various things.
   const bufferInfos = [
     primitives.createCubeBufferInfo(
@@ -58,7 +58,7 @@ function main() {
 
   const contentElem = document.querySelector('#content');
   const items = [];
-  const numItems = 100;
+  const numItems = 3;
   for (let i = 0; i < numItems; ++i) {
     const outerElem = createElem('div', contentElem, 'item');
     const viewElem = createElem('div', outerElem, 'view');
@@ -72,6 +72,8 @@ function main() {
       element: viewElem,
     });
   }
+  
+  console.log(items, typeof(items));
 
   function degToRad(d) {
     return d * Math.PI / 180;
@@ -156,5 +158,3 @@ function main() {
   }
   requestAnimationFrame(render);
 }
-
-main();
