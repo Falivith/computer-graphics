@@ -195,8 +195,7 @@ var main = function (vertexShaderText, fragmentShaderText, inputModel, image) {
 	var angleZ = 1.0;
 	
 	var loop = function () {
-		twgl
-
+		
 		angleY = performance.now() / 1500 / 6 * 2 * Math.PI;
 		mat4.rotate(yRotationMatrix, identityMatrix, angleY, [0, 1, 0])
 		mat4.rotate(xRotationMatrix, identityMatrix, angleX, [1, 0, 0])
