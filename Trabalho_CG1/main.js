@@ -30,6 +30,9 @@ void main() {
 }
 `;
 
+async function loadAssets(){
+  
+}
 
 function main() {
   // Get A WebGL context
@@ -94,7 +97,7 @@ function main() {
     return Math.random() * (max - min) + min;
   }
 
-  const contentElem = document.querySelector('#content');
+  const contentElem = document.querySelector('#right_bar');
   const items = [];
   const numItems = 4;
 

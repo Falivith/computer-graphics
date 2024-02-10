@@ -6,7 +6,7 @@
 
 body {
     font-family: 'Roboto', sans-serif;
-    background-color: aliceblue;
+    background-color: rgb(240, 242, 255);
 }
 
 #canvas{
@@ -16,6 +16,7 @@ body {
     top: 0;
     left: 0;
     display: block;
+    z-index: -1;
 }
 
 .item{
@@ -24,13 +25,47 @@ body {
     padding: 1em;
 }
 
-#content {
+#left_bar {
+    text-align: center;
+    width: min-content;
+    height: 96%;
+    width: 15%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#ui {
+    border-radius: 10px;
+    padding: 10px;
+    background-color: lightgray;
+    height: 50%;
+}
+
+#details {
+    border-radius: 10px;
+    padding: 10px;
+    background-color: lightgray;
+    height: 50%;
+}
+
+#right_bar {
     width: min-content;
     height: 100vh;
     position: fixed;
     top: 0;
     right: 0;
     overflow-y: auto;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1); 
 }
 
 .label {
@@ -42,6 +77,13 @@ body {
     width: 150px;
     height: 150px;
     border: 1px solid black;
+}
+
+.uiContainer{
+    display: flex;
+    width: 200px;
+    height: 200px;
+    background-color: blue;
 }
   
 .pageContainer{
