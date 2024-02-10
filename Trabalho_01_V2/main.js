@@ -1,3 +1,15 @@
+async function loadAssets() {
+  const directory = './assets/obj';
+
+  return loadOBJandMTLFromDirectory(directory)
+    .then(({ objResults, mtlResults }) => {
+        return { objResults, mtlResults };
+    })
+    .catch(error => {
+        throw new Error('Erro ao carregar arquivos: ' + error);
+    });
+}
+
 async function main() {
     var canvas = document.getElementById("canvas");
     var gl = canvas.getContext("webgl2");
@@ -8,13 +20,12 @@ async function main() {
     const vsText = await loadShader('./shaders/vs.glsl');
     const fsText = await loadShader('./shaders/fs.glsl');
 
+    const assets = await loadAssets();
     // Setup GLSL Program
 
     var meshProgramInfo = twgl.createProgramInfo(gl, [vsText, fsText]);
 
-    const response = await fetch('./assets/obj/building_B.obj')
-    const text = await response.text()
-    const obj = parseOBJ(text)
+    const obj = assets.objResults[5];
 
     const baseHref = new URL('./assets/obj/', window.location.href);
     const matTexts = await Promise.all(obj.materialLibs.map(async filename => {
@@ -113,67 +124,133 @@ async function main() {
     });
 
     const extents = getGeometriesExtents(obj.geometries);
-    const range = m4.subtractVectors(extents.max, extents.min);
-    // amount to move the object so its center is at the origin
-    const objOffset = m4.scaleVector(
-        m4.addVectors(
-          extents.min,
-          m4.scaleVector(range, 0.5)),
-        -1);
 
-    const cameraTarget = [0, 0, 3];
-    // figure out how far away to move the camera so we can likely
-    // see the object.
-    const radius = m4.length(range) * 0.5;
+    /*
+      Renderização de Múltiplos Views
+    */
 
-    const cameraPosition = m4.addVectors(cameraTarget, [
-      0,
-      0,
-      radius,
+    const settings = {
+      rotation: 150,  // in degrees
+    };
+
+    webglLessonsUI.setupUI(document.querySelector("#ui"), settings, [
+      { type: "slider",   key: "rotation",   min: 0, max: 360, change: render, precision: 2, step: 0.001, },
     ]);
-    // Set zNear and zFar to something hopefully appropriate
-    // for the size of this object.
-    const zNear = radius / 100;
-    const zFar = radius * 8;
 
-    const up = [0, 1, 0];
+    function updatePosition(index) {
+      return function(event, ui) {
+        translation[index] = ui.value;
+        drawScene();
+      };
+    }
+  
+    function updateRotation(index) {
+      return function(event, ui) {
+        var angleInDegrees = ui.value;
+        var angleInRadians = degToRad(angleInDegrees);
+        rotation[index] = angleInRadians;
+        drawScene();
+      };
+    }
+  
+    function updateScale(index) {
+      return function(event, ui) {
+        scale[index] = ui.value;
+        drawScene();
+      };
+    }
 
-    console.log(m4.inverse(m4.lookAt(cameraPosition, cameraTarget, up)), m4.lookAt(cameraPosition, cameraTarget, up));
-    
+    var translation = [45, 150, 0];
+    var rotation = [degToRad(40), degToRad(25), degToRad(325)];
+    var scale = [1, 1, 1];
+
+    webglLessonsUI.setupSlider("#x",      {value: translation[0], slide: updatePosition(0), max: gl.canvas.width });
+    webglLessonsUI.setupSlider("#y",      {value: translation[1], slide: updatePosition(1), max: gl.canvas.height});
+    webglLessonsUI.setupSlider("#z",      {value: translation[2], slide: updatePosition(2), max: gl.canvas.height});
+    webglLessonsUI.setupSlider("#angleX", {value: radToDeg(rotation[0]), slide: updateRotation(0), max: 360});
+    webglLessonsUI.setupSlider("#angleY", {value: radToDeg(rotation[1]), slide: updateRotation(1), max: 360});
+    webglLessonsUI.setupSlider("#angleZ", {value: radToDeg(rotation[2]), slide: updateRotation(2), max: 360});
+    webglLessonsUI.setupSlider("#scaleX", {value: scale[0], slide: updateScale(0), min: -5, max: 5, step: 0.01, precision: 2});
+    webglLessonsUI.setupSlider("#scaleY", {value: scale[1], slide: updateScale(1), min: -5, max: 5, step: 0.01, precision: 2});
+    webglLessonsUI.setupSlider("#scaleZ", {value: scale[2], slide: updateScale(2), min: -5, max: 5, step: 0.01, precision: 2});
+
+    function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao) {
+      // Clear the canvas AND the depth buffer.
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  
+      // Make a view matrix from the camera matrix.
+      const viewMatrix = m4.inverse(cameraMatrix);
+  
+      let mat = m4.multiply(projectionMatrix, viewMatrix);
+      mat = m4.multiply(mat, worldMatrix);
+  
+      gl.useProgram(programInfo.program);
+
+      gl.bindVertexArray(vao);
+  
+      twgl.setUniforms(programInfo, {
+        u_world: worldMatrix,
+        u_view: viewMatrix,
+        u_projection: projectionMatrix,
+      });
+  
+      twgl.drawBufferInfo(gl, bufferInfo);
+    }
+    console.log(parts);
   function render(time) {
-    time *= 0.001;  // convert to seconds
+
+    time *= 0.001; 
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    
+    gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.SCISSOR_TEST);
 
     const fieldOfViewRadians = degToRad(60);
-    const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+
+    // Dividir o Canvas
+    const effectiveWidth = gl.canvas.clientWidth / 1;
+    const aspect = effectiveWidth / gl.canvas.clientHeight;
+    const zNear = 1;
+    const zFar = 2000;
+
+    // Compute a perspective projection matrix
+    const perspectiveProjectionMatrix = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
+    
+    // Câmera ortográfica 
+    const hhu = 120;
+    const orthographicProjectionMatrix = m4.orthographic(-hhu * aspect, hhu * aspect, -hhu, hhu, -75, 2000);
+
+    const target = [0, 0, 0];
+    const up = [0, 1, 0];
+    const cameraPosition = [0, 0, -3];
+
+    const cameraMatrix = m4.lookAt(cameraPosition, target, up);
+    // Câmera perspectiva
     const projection = m4.perspective(fieldOfViewRadians, aspect, zNear, zFar);
     // Compute the camera's matrix using look at.
-    const camera = m4.lookAt(cameraPosition, cameraTarget, up);
-
+    const camera = m4.lookAt(cameraPosition, target, up);
     // Make a view matrix from the camera matrix.
     const view = m4.inverse(camera);
 
-    const sharedUniforms = {
-      u_lightDirection: m4.normalize([-1, 3, 5]),
-      u_view: view,
-      u_projection: projection,
-      u_viewWorldPosition: cameraPosition,
-    };
-
-
-
     gl.useProgram(meshProgramInfo.program);
-
-    // calls gl.uniform
-    twgl.setUniforms(meshProgramInfo, sharedUniforms);
 
     // compute the world matrix once since all parts
     // are at the same space.
-    let u_world = m4.yRotation(time);
-    u_world = m4.translate(u_world, ...objOffset);
+
+    var matrix = m4_extend.projection(gl.canvas.clientWidth, gl.canvas.clientHeight, 400);
+    matrix = m4_extend.translate(matrix, translation[0], translation[1], translation[2]);
+    matrix = m4_extend.xRotate(matrix, rotation[0]);
+    matrix = m4_extend.yRotate(matrix, rotation[1]);
+    matrix = m4_extend.zRotate(matrix, rotation[2]);
+    matrix = m4_extend.scale(matrix, scale[0], scale[1], scale[2]);
+
+    // Set the matrix.
+    gl.uniformMatrix4fv(matrixLocation, false, matrix);
+
+    let u_world = m4.yRotation(degToRad(settings.rotation));
+    u_world = m4.translate(u_world, 0, -1, 0);
 
     for (const {bufferInfo, vao, material} of parts) {
       // set the attributes for this part.
@@ -181,7 +258,19 @@ async function main() {
       twgl.setUniforms(meshProgramInfo, {
         u_world,
       }, material);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // Set the uniforms
+      twgl.setUniforms(meshProgramInfo, {
+        u_lightDirection: m4.normalize([-1, 3, 5]),
+        u_view: view,
+        u_projection: projection,
+        u_viewWorldPosition: cameraPosition,
+      });
+    
+      // calls gl.drawArrays or gl.drawElements
       twgl.drawBufferInfo(gl, bufferInfo);
+      //twgl.drawBufferInfo(gl, bufferInfo);
+      //drawScene(gl, projection, camera, u_world, meshProgramInfo, bufferInfo);
     }
 
     requestAnimationFrame(render);

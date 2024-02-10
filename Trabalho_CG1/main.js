@@ -1,31 +1,64 @@
+"use strict";
+
+const vs = `#version 300 es
+in vec4 a_position;
+in vec3 a_normal;
+
+uniform mat4 u_matrix;
+
+out vec4 v_color;
+
+void main() {
+  // Multiply the position by the matrix.
+  gl_Position = u_matrix * a_position;
+
+  // Pass the vertex normal as color to the fragment shader.
+  v_color = vec4(a_normal * .5 + .5, 1);
+}
+`;
+
+const fs = `#version 300 es
+precision highp float;
+
+// Passed in from the vertex shader.
+in vec4 v_color;
+
+out vec4 outColor;
+
+void main() {
+  outColor = v_color;
+}
+`;
+
+
 function main() {
-
+  // Get A WebGL context
   /** @type {HTMLCanvasElement} */
-  const canvas = document.querySelector('#canvas');
-  const gl = canvas.getContext('webgl');
-  if (!gl) {
-    return;
-  }
-
+  const canvas = document.querySelector("#canvas");
+  const gl = canvas.getContext("webgl2");
   // setup GLSL programs
   // compiles shaders, links program, looks up locations
-  const programInfo = webglUtils.createProgramInfo(gl, ['vertex-shader-3d', 'fragment-shader-3d']);
-  console.log(programInfo);
+  const programInfo = twgl.createProgramInfo(gl, [vs, fs]);
+
+  // Tell the twgl to match position with a_position,
+  // normal with a_normal etc..
+  twgl.setAttributePrefix("a_");
+
   // create buffers and fill with data for various things.
-  const bufferInfos = [
-    primitives.createCubeBufferInfo(
+  const bufferInfosAndVAOs = [
+    twgl.primitives.createCubeBufferInfo(
         gl,
         1,  // width
         1,  // height
         1,  // depth
     ),
-    primitives.createSphereBufferInfo(
+    twgl.primitives.createSphereBufferInfo(
         gl,
         0.5,  // radius
         8,    // subdivisions around
-        8,    // subdivisions down
+        6,    // subdivisions down
     ),
-    primitives.createTruncatedConeBufferInfo(
+    twgl.primitives.createTruncatedConeBufferInfo(
         gl,
         0.5,  // bottom radius
         0,    // top radius
@@ -33,7 +66,12 @@ function main() {
         6,    // subdivisions around
         1,    // subdivisions down
     ),
-  ];
+  ].map((bufferInfo) => {
+    return {
+      bufferInfo,
+      vao: twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo),
+    };
+  });
 
   function createElem(type, parent, className) {
     const elem = document.createElement(type);
@@ -58,22 +96,24 @@ function main() {
 
   const contentElem = document.querySelector('#content');
   const items = [];
-  const numItems = 3;
+  const numItems = 4;
+
   for (let i = 0; i < numItems; ++i) {
+    
     const outerElem = createElem('div', contentElem, 'item');
     const viewElem = createElem('div', outerElem, 'view');
     const labelElem = createElem('div', outerElem, 'label');
     labelElem.textContent = `Item ${i + 1}`;
-    const bufferInfo = randArrayElement(bufferInfos);
+
+    const {bufferInfo, vao} = randArrayElement(bufferInfosAndVAOs);
     const color = [rand(1), rand(1), rand(1), 1];
     items.push({
       bufferInfo,
+      vao,
       color,
       element: viewElem,
     });
   }
-  
-  console.log(items, typeof(items));
 
   function degToRad(d) {
     return d * Math.PI / 180;
@@ -81,7 +121,7 @@ function main() {
 
   const fieldOfViewRadians = degToRad(60);
 
-  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo) {
+  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao) {
     // Clear the canvas AND the depth buffer.
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -96,21 +136,21 @@ function main() {
     // ------ Draw the bufferInfo --------
 
     // Setup all the needed attributes.
-    webglUtils.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+    gl.bindVertexArray(vao);
 
     // Set the uniform
-    webglUtils.setUniforms(programInfo, {
+    twgl.setUniforms(programInfo, {
       u_matrix: mat,
     });
 
-    webglUtils.drawBufferInfo(gl, bufferInfo);
+    // calls gl.drawArrays or gl.drawElements
+    twgl.drawBufferInfo(gl, bufferInfo);
   }
 
-  console.log(items);
   function render(time) {
     time *= 0.001;  // convert to seconds
 
-    webglUtils.resizeCanvasToDisplaySize(gl.canvas);
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
 
     gl.enable(gl.CULL_FACE);
     gl.enable(gl.DEPTH_TEST);
@@ -119,7 +159,7 @@ function main() {
     // move the canvas to top of the current scroll position
     gl.canvas.style.transform = `translateY(${window.scrollY}px)`;
 
-    for (const {bufferInfo, element, color} of items) {
+    for (const {bufferInfo, vao, element, color} of items) {
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top  > gl.canvas.clientHeight ||
           rect.right  < 0 || rect.left > gl.canvas.clientWidth) {
@@ -129,7 +169,7 @@ function main() {
       const width  = rect.right - rect.left;
       const height = rect.bottom - rect.top;
       const left   = rect.left;
-      const bottom = gl.canvas.clientHeight - rect.bottom;
+      const bottom = gl.canvas.clientHeight - rect.bottom - 1;
 
       gl.viewport(left, bottom, width, height);
       gl.scissor(left, bottom, width, height);
@@ -153,9 +193,11 @@ function main() {
       const rTime = time * 0.2;
       const worldMatrix = m4.xRotate(m4.yRotation(rTime), rTime);
 
-      drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo);
+      drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao);
     }
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
 }
+
+main();
