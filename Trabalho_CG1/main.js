@@ -221,14 +221,14 @@ function main(models) {
           m4.perspective(fieldOfViewRadians, aspect, near, far);
 
       // Compute the camera's matrix using look at.
-      const cameraPosition = [0, 0, -3];
-      const target = [0, 0, 0];
+      const cameraPosition = [0, 2, -3];
+      const target = [0, 0.5, 0];
       const up = [0, 1, 0];
       const cameraMatrix = m4.lookAt(cameraPosition, target, up);
 
       // rotate the item
       const rTime = time * 0.2;
-      const worldMatrix = m4.xRotate(m4.yRotation(rTime), rTime);
+      const worldMatrix = (m4.yRotation(rTime));
 
       drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao);
     }
