@@ -1,3 +1,15 @@
+async function loadAssets() {
+  const directory = './assets/obj';
+
+  return loadOBJandMTLFromDirectory(directory)
+    .then(({ objResults, mtlResults }) => {
+        return { objResults, mtlResults };
+    })
+    .catch(error => {
+        throw new Error('Erro ao carregar arquivos: ' + error);
+    });
+}
+
 async function main() {
     var canvas = document.getElementById("canvas");
     var gl = canvas.getContext("webgl2");
@@ -14,7 +26,7 @@ async function main() {
     var meshProgramInfo = twgl.createProgramInfo(gl, [vsText, fsText]);
 
     const obj = assets.objResults[5];
-
+    
     const baseHref = new URL('./assets/obj/', window.location.href);
     const matTexts = await Promise.all(obj.materialLibs.map(async filename => {
       const matHref = new URL(filename, baseHref).href;
@@ -23,10 +35,14 @@ async function main() {
     }));
     const materials = parseMTL(matTexts.join('\n'));
 
+    console.log(matTexts);
+
     const textures = {
       defaultWhite: twgl.createTexture(gl, {src: [255, 255, 255, 255]}),
       defaultNormal: twgl.createTexture(gl, {src: [127, 127, 255, 0]}),
     };
+
+    console.log('materials:', Object.values(materials));
     
     for (const material of Object.values(materials)) {
       Object.entries(material)
@@ -101,6 +117,8 @@ async function main() {
   
       const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
       const vao = twgl.createVAOFromBufferInfo(gl, meshProgramInfo, bufferInfo);
+
+      console.log(materials[material]);
       return {
         material: {
           ...defaultMaterial,
@@ -227,25 +245,12 @@ async function main() {
     // compute the world matrix once since all parts
     // are at the same space.
 
-    var matrix = m4_extend.projection(gl.canvas.clientWidth, gl.canvas.clientHeight, 400);
-    matrix = m4_extend.translate(matrix, translation[0], translation[1], translation[2]);
-    matrix = m4_extend.xRotate(matrix, rotation[0]);
-    matrix = m4_extend.yRotate(matrix, rotation[1]);
-    matrix = m4_extend.zRotate(matrix, rotation[2]);
-    matrix = m4_extend.scale(matrix, scale[0], scale[1], scale[2]);
-
-    // Set the matrix.
-    gl.uniformMatrix4fv(matrixLocation, false, matrix);
-
     let u_world = m4.yRotation(degToRad(settings.rotation));
     u_world = m4.translate(u_world, 0, -1, 0);
 
     for (const {bufferInfo, vao, material} of parts) {
       // set the attributes for this part.
       gl.bindVertexArray(vao);
-      twgl.setUniforms(meshProgramInfo, {
-        u_world,
-      }, material);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       // Set the uniforms
       twgl.setUniforms(meshProgramInfo, {
@@ -253,7 +258,8 @@ async function main() {
         u_view: view,
         u_projection: projection,
         u_viewWorldPosition: cameraPosition,
-      });
+        u_world,
+      }, material);
     
       // calls gl.drawArrays or gl.drawElements
       twgl.drawBufferInfo(gl, bufferInfo);
