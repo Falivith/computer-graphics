@@ -150,14 +150,6 @@ async function main() {
       };
     }
   
-    function updateRotation(index) {
-      return function(event, ui) {
-        var angleInDegrees = ui.value;
-        var angleInRadians = degToRad(angleInDegrees);
-        rotation[index] = angleInRadians;
-        drawScene();
-      };
-    }
   
     function updateScale(index) {
       return function(event, ui) {

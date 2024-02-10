@@ -53,6 +53,9 @@ uniform float opacity;
 uniform vec3 u_lightDirection;
 uniform vec3 u_ambientLight;
 
+uniform vec4 u_id;
+
+
 out vec4 outColor;
 
 void main () {
@@ -200,8 +203,6 @@ async function main(models) {
     });
   });
 
-  console.log(bufferInfosAndVAOs);
-
   function createElem(type, parent, className) {
     const elem = document.createElement(type);
     parent.appendChild(elem);
@@ -228,19 +229,8 @@ async function main(models) {
   const numItems = 60;
 
   for (let i = 5; i < numItems; ++i) {
-    
-    const outerElem = createElem('div', contentElem, 'item_from_list');
-    
-    const viewElem = createElem('div', outerElem, 'view_from_list');
-
-    viewElem.onclick = function() {
-      pickModelFromMenu(name);
-    };
-
-    const labelElem = createElem('div', outerElem, 'label');
 
     const {bufferInfo, vao, material, name, geometries} = bufferInfosAndVAOs[i];
-    labelElem.textContent = name;
 
     if(i == 5){
       
@@ -256,9 +246,23 @@ async function main(models) {
         color: [0.1, 0.1, 0.3, 0.1],
         material,
         element: viewElem,
-        geometries
+        geometries,
+        name: 'focused'
       });
+
+      continue;
     }
+
+    const outerElem = createElem('div', contentElem, 'item_from_list');
+    const viewElem = createElem('div', outerElem, 'view_from_list');
+
+    viewElem.onclick = function() {
+      pickModelFromMenu(name);
+    };
+
+    const labelElem = createElem('div', outerElem, 'label');
+
+    labelElem.textContent = name;
 
     const color = [1, 0.2, 0.2, 0.4];
     items.push({
@@ -267,19 +271,48 @@ async function main(models) {
       color,
       material,
       element: viewElem,
-      geometries
+      geometries,
+      name
     });
   }
 
   const fieldOfViewRadians = degToRad(60);
 
-  const settings = {
-    rotation: 150,
-  };
+  var translation = [0, 0, 0];
+  var rotation = [0, 0, 0];
+  var scale = [1, 1, 1];
 
-  webglLessonsUI.setupUI(document.querySelector("#ui"), settings, [
-    { type: "slider",   key: "rotation",   min: 0, max: 360, change: render, precision: 2, step: 0.001, },
-  ]);
+  webglLessonsUI.setupSlider("#x", {value: translation[0], slide: updatePosition(0), min: -5, max: +5, step: 0.1, precision: 2});
+  webglLessonsUI.setupSlider("#y", {value: translation[1], slide: updatePosition(1), min: -5, max: +5, step: 0.1, precision: 2});
+  webglLessonsUI.setupSlider("#z", {value: translation[2], slide: updatePosition(2), min: -5, max: +5, step: 0.1, precision: 2});
+
+  webglLessonsUI.setupSlider("#angleX", {value: rotation[0], slide: updateRotation(0), max: 360});
+  webglLessonsUI.setupSlider("#angleY", {value: rotation[1], slide: updateRotation(1),   max: 360});
+  webglLessonsUI.setupSlider("#angleZ", {value: rotation[2], slide: updateRotation(2),  max: 360});
+
+  webglLessonsUI.setupSlider("#scaleX", {value: scale[0], slide: updateScale(0), min: -5, max: 5, step: 0.01, precision: 2});
+  webglLessonsUI.setupSlider("#scaleY", {value: scale[1], slide: updateScale(1), min: -5, max: 5, step: 0.01, precision: 2});
+  webglLessonsUI.setupSlider("#scaleZ", {value: scale[2], slide: updateScale(2), min: -5, max: 5, step: 0.01, precision: 2});
+
+  function updatePosition(index) {
+    return function(event, ui) {
+      translation[index] = ui.value;
+    };
+  }
+
+  function updateRotation(index) {
+    return function(event, ui) {
+      var angleInDegrees = ui.value;
+      var angleInRadians = angleInDegrees * Math.PI / 180;
+      rotation[index] = angleInRadians;
+    };
+  }
+
+  function updateScale(index) {
+    return function(event, ui) {
+      scale[index] = ui.value;
+    };
+  }
 
   function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture) {
     // Clear the canvas AND the depth buffer.
@@ -307,8 +340,6 @@ async function main(models) {
     twgl.drawBufferInfo(gl, bufferInfo);
   }
 
-  console.log(bufferInfosAndVAOs);
-  
   function render(time) {
     time *= 0.001;  // convert to seconds
 
@@ -321,7 +352,7 @@ async function main(models) {
     // move the canvas to top of the current scroll position
     gl.canvas.style.transform = `translateY(${window.scrollY}px)`;
 
-    for (const {bufferInfo, vao, element, material, color, geometries} of items) {
+    for (const {bufferInfo, vao, element, material, color, geometries, name} of items) {
 
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top  > gl.canvas.clientHeight ||
@@ -369,8 +400,22 @@ async function main(models) {
 
       // rotate the item
       const rTime = time * 0.7;
-      let worldMatrix = (m4.yRotation(rTime));
-      worldMatrix = m4.translate(worldMatrix, ...objOffset);
+      
+      let worldMatrix = m4.identity();
+
+      if(name != 'focused'){
+        worldMatrix = (m4.yRotation(rTime));
+        worldMatrix = m4.translate(worldMatrix, ...objOffset);       
+      }
+
+
+      if(name == 'focused'){
+        worldMatrix = m4.translate(worldMatrix, translation[0], translation[1], translation[2])
+        worldMatrix = m4.xRotate(worldMatrix, rotation[0])
+        worldMatrix = m4.yRotate(worldMatrix, rotation[1])
+        worldMatrix = m4.zRotate(worldMatrix, rotation[2])
+        worldMatrix = m4.scale(worldMatrix, scale[0], scale[1], scale[2])
+      }
 
       drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material);
     }
