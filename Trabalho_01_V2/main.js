@@ -1,15 +1,3 @@
-async function loadAssets() {
-  const directory = './assets/obj';
-
-  return loadOBJandMTLFromDirectory(directory)
-    .then(({ objResults, mtlResults }) => {
-        return { objResults, mtlResults };
-    })
-    .catch(error => {
-        throw new Error('Erro ao carregar arquivos: ' + error);
-    });
-}
-
 async function main() {
     var canvas = document.getElementById("canvas");
     var gl = canvas.getContext("webgl2");

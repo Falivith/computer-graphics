@@ -54,6 +54,16 @@ function degToRad(d) {
     return d * Math.PI / 180;
 }
 
+async function loadAssets(url) {
+  return loadOBJandMTLFromDirectory(url)
+    .then(({ objResults, mtlResults }) => {
+        return { objResults, mtlResults };
+    })
+    .catch(error => {
+        throw new Error('Erro ao carregar arquivos: ' + error);
+    });
+}
+
 function parseOBJ(text) {
   // because indices are base 1 let's just fill in the 0th data
   const objPositions = [[0, 0, 0]];

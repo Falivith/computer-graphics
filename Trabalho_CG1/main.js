@@ -30,8 +30,19 @@ void main() {
 }
 `;
 
-async function loadAssets(){
-  
+async function loadFiles(){
+  const vsText = await loadShader('./shaders/vs.glsl');
+  const fsText = await loadShader('./shaders/fs.glsl');
+  const assets = await loadAssets('./assets/obj');
+
+  const models = {
+    objects: assets.objResults,
+    texture: assets.mtlResults[0]
+  }
+
+  console.log(models);
+
+  main();
 }
 
 function main() {
@@ -54,20 +65,6 @@ function main() {
         1,  // width
         1,  // height
         1,  // depth
-    ),
-    twgl.primitives.createSphereBufferInfo(
-        gl,
-        0.5,  // radius
-        8,    // subdivisions around
-        6,    // subdivisions down
-    ),
-    twgl.primitives.createTruncatedConeBufferInfo(
-        gl,
-        0.5,  // bottom radius
-        0,    // top radius
-        1,    // height
-        6,    // subdivisions around
-        1,    // subdivisions down
     ),
   ].map((bufferInfo) => {
     return {
@@ -203,4 +200,4 @@ function main() {
   requestAnimationFrame(render);
 }
 
-main();
+loadFiles();
