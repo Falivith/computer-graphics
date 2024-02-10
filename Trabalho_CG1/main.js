@@ -95,8 +95,6 @@ async function loadFiles(){
     texture: assets.mtlResults[0]
   }
 
-  console.log(models);
-
   main(models);
 }
 
@@ -105,12 +103,8 @@ async function main(models) {
   /** @type {HTMLCanvasElement} */
   const canvas = document.querySelector("#canvas");
   const gl = canvas.getContext("webgl2");
-  // setup GLSL programs
-  // compiles shaders, links program, looks up locations
   const programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
-  // Tell the twgl to match position with a_position,
-  // normal with a_normal etc..
   twgl.setAttributePrefix("a_");
 
   const actualObj = models.objects[7];
@@ -143,7 +137,7 @@ async function main(models) {
   }
 
   Object.values(materials).forEach(m => {
-    m.shininess = 25;
+    m.shininess = 15;
     m.specular = [3, 2, 1];
   });
 
@@ -158,60 +152,52 @@ async function main(models) {
     opacity: 1,
   };
 
-  const bufferInfosAndVAOs = models.objects[7].geometries.map(({material, data, object}) => {
-    // Because data is just named arrays like this
-    //
-    // {
-    //   position: [...],
-    //   texcoord: [...],
-    //   normal: [...],
-    // }
-    //
-    // and because those names match the attributes in our vertex
-    // shader we can pass it directly into `createBufferInfoFromArrays`
-    // from the article "less code more fun".
-    if (data.color) {
-      if (data.position.length === data.color.length) {
-        // it's 3. The our helper library assumes 4 so we need
-        // to tell it there are only 3.
+  let bufferInfosAndVAOs = [];
+
+  Object.keys(models.objects).forEach(key => {
+    const geometries = models.objects[key].geometries;
+  
+    // Iterar sobre todas as geometrias do modelo atual
+    geometries.forEach(({ material, data, object }) => {
+      if (data.color && data.position.length === data.color.length) {
         data.color = { numComponents: 3, data: data.color };
+      } else {
+        data.color = { value: [1, 1, 1] };
       }
-    } else {
-      // there are no vertex colors so just use constant white
-      data.color = { value: [1, 1, 1, 1] };
-    }
-
-    // generate tangents if we have the data to do so.
-    if (data.texcoord && data.normal) {
-      data.tangent = generateTangents(data.position, data.texcoord);
-    } else {
-      // There are no tangents
-      data.tangent = { value: [1, 0, 0] };
-    }
-
-    if (!data.texcoord) {
-      data.texcoord = { value: [0, 0] };
-    }
-
-    if (!data.normal) {
-      // we probably want to generate normals if there are none
-      data.normal = { value: [0, 0, 1] };
-    }
-
-    // create a buffer for each array by calling
-    // gl.createBuffer, gl.bindBuffer, gl.bufferData
-    const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
-    const vao = twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo);
-
-    return {
-      material: {
-        ...defaultMaterial,
-        ...materials[material],
-      },
-      bufferInfo,
-      vao,
-      name: object
-    };
+  
+      if (data.texcoord && data.normal) {
+        data.tangent = generateTangents(data.position, data.texcoord);
+      } else {
+        // Se não houver tangentes, definimos uma por padrão
+        data.tangent = { value: [1, 0, 0] };
+      }
+  
+      // Se não houver dados de coordenadas de textura, definimos uma por padrão
+      if (!data.texcoord) {
+        data.texcoord = { value: [0, 0] };
+      }
+  
+      // Se não houver dados de normais, geramos eles
+      if (!data.normal) {
+        data.normal = { value: [0, 0, 1] };
+      }
+  
+      // Criar buffer e VAO para os dados da geometria
+      const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
+      const vao = twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo);
+  
+      // Adicionar informações ao array bufferInfosAndVAOs
+      bufferInfosAndVAOs.push({
+        material: {
+          ...defaultMaterial,
+          ...materials[material],
+        },
+        bufferInfo,
+        vao,
+        name: object,
+        geometries
+      });
+    });
   });
 
   console.log(bufferInfosAndVAOs);
@@ -239,15 +225,15 @@ async function main(models) {
 
   const contentElem = document.querySelector('#right_bar');
   const items = [];
-  const numItems = 4;
+  const numItems = 60;
 
-  for (let i = 0; i < numItems; ++i) {
+  for (let i = 5; i < numItems; ++i) {
     
     const outerElem = createElem('div', contentElem, 'item');
     const viewElem = createElem('div', outerElem, 'view');
     const labelElem = createElem('div', outerElem, 'label');
 
-    const {bufferInfo, vao, material, name} = randArrayElement(bufferInfosAndVAOs);
+    const {bufferInfo, vao, material, name, geometries} = bufferInfosAndVAOs[i];
     labelElem.textContent = name;
     const color = [rand(0.5), 0.2, 0.2, 0.4];
     items.push({
@@ -256,6 +242,7 @@ async function main(models) {
       color,
       material,
       element: viewElem,
+      geometries
     });
   }
 
@@ -285,7 +272,7 @@ async function main(models) {
     gl.bindVertexArray(vao);
     // Set the uniform
     twgl.setUniforms(programInfo, {
-      u_lightDirection: m4.normalize([-1, 3, 5]),
+      u_lightDirection: m4.normalize([-1, 4, 5]),
       u_world: worldMatrix,
       u_view: viewMatrix,
       u_projection: projectionMatrix,
@@ -295,6 +282,8 @@ async function main(models) {
     twgl.drawBufferInfo(gl, bufferInfo);
   }
 
+  console.log(bufferInfosAndVAOs);
+  
   function render(time) {
     time *= 0.001;  // convert to seconds
 
@@ -308,9 +297,8 @@ async function main(models) {
     gl.canvas.style.transform = `translateY(${window.scrollY}px)`;
 
     let u_world = m4.yRotation(degToRad(50));
-    u_world = m4.translate(u_world, 0, -1, 0);
 
-    for (const {bufferInfo, vao, element, material, color} of items) {
+    for (const {bufferInfo, vao, element, material, color, geometries} of items) {
 
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top  > gl.canvas.clientHeight ||
@@ -327,23 +315,39 @@ async function main(models) {
       gl.scissor(left, bottom, width, height);
       gl.clearColor(...color);
 
-      const aspect = width / height;
-      const near = 1;
-      const far = 2000;
+      const extents = getGeometriesExtents(geometries);
+      const range = m4.subtractVectors(extents.max, extents.min);
+      const objOffset = m4.scaleVector(
+          m4.addVectors(
+            extents.min,
+            m4.scaleVector(range, 0.5)),
+          -1);
+      const cameraTarget = [0, 1, 0];
+      const radius = m4.length(range) * 1.1;
+      const cameraPosition = m4.addVectors(cameraTarget, [
+        0,
+        1.2,
+        radius,
+      ]);
+      // Set zNear and zFar to something hopefully appropriate
+      // for the size of this object.
+      const near = radius / 100;
+      const far = radius * 3;
 
+      const aspect = width / height;
       // Compute a perspective projection matrix
       const perspectiveProjectionMatrix =
           m4.perspective(fieldOfViewRadians, aspect, near, far);
 
       // Compute the camera's matrix using look at.
-      const cameraPosition = [0, 2, -3];
-      const target = [0, 0.5, 0];
+      const target = [0, 0, 0];
       const up = [0, 1, 0];
       const cameraMatrix = m4.lookAt(cameraPosition, target, up);
 
       // rotate the item
-      const rTime = time * 0.2;
-      const worldMatrix = (m4.yRotation(rTime));
+      const rTime = time * 0.7;
+      let worldMatrix = (m4.yRotation(rTime));
+      worldMatrix = m4.translate(worldMatrix, ...objOffset);
 
       drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material);
     }
