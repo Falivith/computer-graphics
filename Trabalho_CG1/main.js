@@ -77,7 +77,7 @@ function main(models) {
   console.log('Funciona:', bufferInfosAndVAOs);
   console.log('Antes do Buffer:', models.objects[5].geometries[0]);
 
-  bufferInfosAndVAOs = models.objects[5].geometries.map(({data}) => {
+  bufferInfosAndVAOs = models.objects[7].geometries.map(({data, object}) => {
     // Because data is just named arrays like this
     //
     // {
@@ -111,8 +111,11 @@ function main(models) {
       },
       bufferInfo,
       vao,
+      name: object
     };
   });
+
+  console.log(bufferInfosAndVAOs);
 
   function createElem(type, parent, className) {
     const elem = document.createElement(type);
@@ -144,14 +147,15 @@ function main(models) {
     const outerElem = createElem('div', contentElem, 'item');
     const viewElem = createElem('div', outerElem, 'view');
     const labelElem = createElem('div', outerElem, 'label');
-    labelElem.textContent = `Item ${i + 1}`;
 
-    const {bufferInfo, vao} = randArrayElement(bufferInfosAndVAOs);
-    const color = [rand(1), rand(1), rand(1), 1];
+    const {bufferInfo, vao, material, name} = randArrayElement(bufferInfosAndVAOs);
+    labelElem.textContent = name;
+    const color = [rand(0.5), 0.2, 0.2, 0.4];
     items.push({
       bufferInfo,
       vao,
       color,
+      material,
       element: viewElem,
     });
   }

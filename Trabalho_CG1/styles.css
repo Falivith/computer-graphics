@@ -69,8 +69,11 @@ body {
 }
 
 .label {
+    word-break: break-all;
+    font-size: 12px;
     margin-top: 0.5em;
-    text-align: center;
+    max-width: 95%;
+    text-overflow:clip;
 }
 
 .view {
