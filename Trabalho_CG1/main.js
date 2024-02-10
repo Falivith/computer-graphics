@@ -229,13 +229,38 @@ async function main(models) {
 
   for (let i = 5; i < numItems; ++i) {
     
-    const outerElem = createElem('div', contentElem, 'item');
-    const viewElem = createElem('div', outerElem, 'view');
+    const outerElem = createElem('div', contentElem, 'item_from_list');
+    
+    const viewElem = createElem('div', outerElem, 'view_from_list');
+
+    viewElem.onclick = function() {
+      pickModelFromMenu(name);
+    };
+
     const labelElem = createElem('div', outerElem, 'label');
 
     const {bufferInfo, vao, material, name, geometries} = bufferInfosAndVAOs[i];
     labelElem.textContent = name;
-    const color = [rand(0.5), 0.2, 0.2, 0.4];
+
+    if(i == 5){
+      
+      const scene = document.getElementById("scene")
+      const outerElem = createElem('div', scene, 'sceneItem');
+      outerElem.id = 'sceneItem'
+      const viewElem = createElem('div', outerElem, 'sceneView');
+      viewElem.id = 'sceneView'
+      
+      items.push({
+        bufferInfo,
+        vao,
+        color: [0.1, 0.1, 0.3, 0.1],
+        material,
+        element: viewElem,
+        geometries
+      });
+    }
+
+    const color = [1, 0.2, 0.2, 0.4];
     items.push({
       bufferInfo,
       vao,
@@ -295,8 +320,6 @@ async function main(models) {
 
     // move the canvas to top of the current scroll position
     gl.canvas.style.transform = `translateY(${window.scrollY}px)`;
-
-    let u_world = m4.yRotation(degToRad(50));
 
     for (const {bufferInfo, vao, element, material, color, geometries} of items) {
 
