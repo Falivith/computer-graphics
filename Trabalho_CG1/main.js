@@ -42,10 +42,10 @@ async function loadFiles(){
 
   console.log(models);
 
-  main();
+  main(models);
 }
 
-function main() {
+function main(models) {
   // Get A WebGL context
   /** @type {HTMLCanvasElement} */
   const canvas = document.querySelector("#canvas");
@@ -59,7 +59,7 @@ function main() {
   twgl.setAttributePrefix("a_");
 
   // create buffers and fill with data for various things.
-  const bufferInfosAndVAOs = [
+  let bufferInfosAndVAOs = [
     twgl.primitives.createCubeBufferInfo(
         gl,
         1,  // width
@@ -70,6 +70,47 @@ function main() {
     return {
       bufferInfo,
       vao: twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo),
+    };
+  });
+
+  console.log('Antes do Buffer:', twgl.primitives.createCubeBufferInfo(gl,1,1, ),);
+  console.log('Funciona:', bufferInfosAndVAOs);
+  console.log('Antes do Buffer:', models.objects[5].geometries[0]);
+
+  bufferInfosAndVAOs = models.objects[5].geometries.map(({data}) => {
+    // Because data is just named arrays like this
+    //
+    // {
+    //   position: [...],
+    //   texcoord: [...],
+    //   normal: [...],
+    // }
+    //
+    // and because those names match the attributes in our vertex
+    // shader we can pass it directly into `createBufferInfoFromArrays`
+    // from the article "less code more fun".
+
+    if (data.color) {
+      if (data.position.length === data.color.length) {
+        // it's 3. The our helper library assumes 4 so we need
+        // to tell it there are only 3.
+        data.color = { numComponents: 3, data: data.color };
+      }
+    } else {
+      // there are no vertex colors so just use constant white
+      data.color = { value: [1, 1, 1, 1] };
+    }
+
+    // create a buffer for each array by calling
+    // gl.createBuffer, gl.bindBuffer, gl.bufferData
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
+    const vao = twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo);
+    return {
+      material: {
+        u_diffuse: [1, 1, 1, 1],
+      },
+      bufferInfo,
+      vao,
     };
   });
 
@@ -113,10 +154,6 @@ function main() {
       color,
       element: viewElem,
     });
-  }
-
-  function degToRad(d) {
-    return d * Math.PI / 180;
   }
 
   const fieldOfViewRadians = degToRad(60);
@@ -184,7 +221,7 @@ function main() {
           m4.perspective(fieldOfViewRadians, aspect, near, far);
 
       // Compute the camera's matrix using look at.
-      const cameraPosition = [0, 0, -2];
+      const cameraPosition = [0, 0, -3];
       const target = [0, 0, 0];
       const up = [0, 1, 0];
       const cameraMatrix = m4.lookAt(cameraPosition, target, up);
