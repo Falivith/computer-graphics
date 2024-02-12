@@ -451,6 +451,27 @@ async function loadOBJandMTLFromDirectory() {
   return { objResults, mtlResults };
 }
 
+function readAsJSON(file) {
+  return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = () => {
+          try {
+              const jsonData = JSON.parse(reader.result);
+              resolve(jsonData);
+          } catch (error) {
+              reject(error);
+          }
+      };
+      
+      reader.onerror = () => {
+          reject(new Error('Erro ao ler o arquivo.'));
+      };
+      
+      reader.readAsText(file);
+  });
+}
+
 function eMod(x, n) {
   return x >= 0 ? (x % n) : ((n - (-x % n)) % n);
 }

@@ -91,8 +91,6 @@ void main () {
 async function loadFiles(){
   const assets = await loadAssets();
 
-  console.log(assets);
-
   const models = {
     objects: assets.objResults,
     texture: assets.mtlResults[0]
@@ -240,6 +238,7 @@ async function main(models) {
       });
 
       updateItems(items);
+      console.log(items);
       updateListeners();
     };
 
@@ -341,33 +340,46 @@ async function main(models) {
     exportState();
   };
 
-  let imported = false;
-
   function exportState(){
-    const json = convertToJSON(items);
+    const itemsWithId = items.filter(item => item.id !== undefined);
+  
+    const itemsJSON = itemsWithId.map(item => ({
+      id: item.id,
+      name: item.name,
+      rotation: item.rotation,
+      scale: item.scale,
+      translation: item.translation
+    }));
+  
+    const json = JSON.stringify(itemsJSON, null, 2);
     const blob = new Blob([json], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
     a.download = 'scene.json';
-    
     document.body.appendChild(a);
     a.click();
-    
     document.body.removeChild(a);
   }
 
   document.getElementById('fileChooser').addEventListener('change', function(event) {
-    items = [];
+    console.log('blau');
     const file = event.target.files[0];
-      if (file) {
-          handleFile(file, function(data) {
-              items = data;
-              console.log(data);
-          });
-      }
-    });
+    if (file) {
+        readAsJSON(file)
+            .then(data => {
+                console.log(data);
+                importState(data, bufferInfosAndVAOs, items);
+            })
+            .catch(error => {
+                console.error('Erro ao ler o arquivo:', error);
+            });
+    }
+
+    const fileInput = document.getElementById('fileChooser')
+    fileInput.value = '';
+
+  });
 
   function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused) {
 

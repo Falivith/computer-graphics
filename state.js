@@ -108,7 +108,39 @@ document.getElementById('importScene').addEventListener('click', function() {
     document.getElementById('fileChooser').click();
 });
 
-function importState(importedItems) {
-    updateItems(importedItems);
+
+function importState(importedItems, bufferInfosAndVAOs, oldItems) {
+
+    const viewElem = document.getElementById("sceneView");
+
+    importedItems.forEach(importedItem => {
+        const name = importedItem.name;
+        const index = bufferInfosAndVAOs.findIndex(obj => obj.name === name);
+        if (index !== -1) {
+            const matchedObject = bufferInfosAndVAOs[index];
+
+            console.log('Correspondência encontrada:', matchedObject);
+
+            oldItems.push({
+                id: importedItem.id,
+                name: bufferInfosAndVAOs[index].name,
+                bufferInfo: bufferInfosAndVAOs[index].bufferInfo,
+                vao: bufferInfosAndVAOs[index].vao,
+                color: [0.1, 0.1, 0.3, 0.1],
+                material: bufferInfosAndVAOs[index].material,
+                element: viewElem,
+                geometries: bufferInfosAndVAOs[index].geometries,
+                focused: true,
+                translation: importedItem.translation,
+                rotation: importedItem.rotation,
+                scale: importedItem.scale,
+              });
+
+        } else {
+            console.warn(`Nenhuma correspondência encontrada para o item com o nome "${name}"`);
+        }
+    });
+
+    updateItems(oldItems);
     updateListeners();
 }
