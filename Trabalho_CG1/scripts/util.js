@@ -402,6 +402,9 @@ async function loadOBJandMTLFromDirectory(directory) {
   return { objResults, mtlResults };
 }
 
+function eMod(x, n) {
+  return x >= 0 ? (x % n) : ((n - (-x % n)) % n);
+}
 
 async function loadOBJ(url) {
   const response = await fetch(url);

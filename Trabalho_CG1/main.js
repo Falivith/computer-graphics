@@ -106,11 +106,10 @@ async function main(models) {
   /** @type {HTMLCanvasElement} */
   const canvas = document.querySelector("#canvas");
   const gl = canvas.getContext("webgl2");
+
   const programInfo = twgl.createProgramInfo(gl, [vs, fs]);
 
   twgl.setAttributePrefix("a_");
-
-  const actualObj = models.objects[7];
 
   const textures = {
     defaultWhite: twgl.createTexture(gl, {src: [255, 255, 255, 255]}),
@@ -118,7 +117,7 @@ async function main(models) {
   };
 
   const baseHref = new URL('./assets/obj/', window.location.href);
-  const matTexts = await Promise.all(actualObj.materialLibs.map(async filename => {
+  const matTexts = await Promise.all(models.objects[0].materialLibs.map(async filename => {
     const matHref = new URL(filename, baseHref).href;
     const response = await fetch(matHref);
     return await response.text();
@@ -224,6 +223,9 @@ async function main(models) {
     return Math.random() * (max - min) + min;
   }
 
+  var mainSceneObjects = [];
+  var idCounter = 0;
+
   const contentElem = document.querySelector('#right_bar');
   const items = [];
   const numItems = 60;
@@ -232,32 +234,33 @@ async function main(models) {
 
     const {bufferInfo, vao, material, name, geometries} = bufferInfosAndVAOs[i];
 
-    if(i == 5){
-      
-      const scene = document.getElementById("scene")
-      const outerElem = createElem('div', scene, 'sceneItem');
-      outerElem.id = 'sceneItem'
-      const viewElem = createElem('div', outerElem, 'sceneView');
-      viewElem.id = 'sceneView'
-      
-      items.push({
-        bufferInfo,
-        vao,
-        color: [0.1, 0.1, 0.3, 0.1],
-        material,
-        element: viewElem,
-        geometries,
-        name: 'focused'
-      });
-
-      continue;
-    }
-
     const outerElem = createElem('div', contentElem, 'item_from_list');
     const viewElem = createElem('div', outerElem, 'view_from_list');
 
     viewElem.onclick = function() {
-      pickModelFromMenu(name);
+      
+      const viewElem = document.getElementById("sceneView")      
+      mainSceneObjects = pickModelFromMenu(name, bufferInfosAndVAOs);
+      const index = mainSceneObjects.index;
+
+      items.push({
+        id: idCounter++,
+        name: bufferInfosAndVAOs[index].name,
+        bufferInfo: bufferInfosAndVAOs[index].bufferInfo,
+        vao: bufferInfosAndVAOs[index].vao,
+        color: [0.1, 0.1, 0.3, 0.1],
+        material: bufferInfosAndVAOs[index].material,
+        element: viewElem,
+        geometries: bufferInfosAndVAOs[index].geometries,
+        focused: true,
+        translation: [0, 0, 0],
+        rotation: [0, 0, 0],
+        scale: [1, 1, 1],
+      });
+
+      updateItems(items);
+      updateListeners();
+      console.log(items);
     };
 
     const labelElem = createElem('div', outerElem, 'label');
@@ -266,13 +269,13 @@ async function main(models) {
 
     const color = [1, 0.2, 0.2, 0.4];
     items.push({
+      name,
       bufferInfo,
       vao,
       color,
       material,
       element: viewElem,
       geometries,
-      name
     });
   }
 
@@ -296,27 +299,43 @@ async function main(models) {
 
   function updatePosition(index) {
     return function(event, ui) {
-      translation[index] = ui.value;
+        const selectedItem = items.find(item => item.id == selected);
+
+        if (selectedItem) {
+            selectedItem.translation[index] = ui.value;
+        }
     };
   }
 
   function updateRotation(index) {
     return function(event, ui) {
-      var angleInDegrees = ui.value;
-      var angleInRadians = angleInDegrees * Math.PI / 180;
-      rotation[index] = angleInRadians;
+        const angleInDegrees = ui.value;
+        const angleInRadians = angleInDegrees * Math.PI / 180;
+
+        const selectedItem = items.find(item => item.id == selected);
+
+        if (selectedItem) {
+            selectedItem.rotation[index] = angleInRadians;
+        }
     };
   }
 
   function updateScale(index) {
-    return function(event, ui) {
-      scale[index] = ui.value;
-    };
+      return function(event, ui) {
+          const selectedItem = items.find(item => item.id == selected);
+
+          if (selectedItem) {
+              selectedItem.scale[index] = ui.value;
+          }
+      };
   }
 
-  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture) {
+  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused) {
+
     // Clear the canvas AND the depth buffer.
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if(!focused){
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
 
     // Make a view matrix from the camera matrix.
     const viewMatrix = m4.inverse(cameraMatrix);
@@ -341,6 +360,7 @@ async function main(models) {
   }
 
   function render(time) {
+
     time *= 0.001;  // convert to seconds
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
@@ -352,7 +372,19 @@ async function main(models) {
     // move the canvas to top of the current scroll position
     gl.canvas.style.transform = `translateY(${window.scrollY}px)`;
 
-    for (const {bufferInfo, vao, element, material, color, geometries, name} of items) {
+    for (const {
+       bufferInfo,
+       vao, 
+       element, 
+       material, 
+       color, 
+       geometries, 
+       name, 
+       focused, 
+       translation,
+       rotation,
+       scale
+      } of items) {
 
       const rect = element.getBoundingClientRect();
       if (rect.bottom < 0 || rect.top  > gl.canvas.clientHeight ||
@@ -403,21 +435,19 @@ async function main(models) {
       
       let worldMatrix = m4.identity();
 
-      if(name != 'focused'){
+      if(!focused){
         worldMatrix = (m4.yRotation(rTime));
         worldMatrix = m4.translate(worldMatrix, ...objOffset);       
       }
 
-
-      if(name == 'focused'){
-        worldMatrix = m4.translate(worldMatrix, translation[0], translation[1], translation[2])
+      if(focused){
+        worldMatrix = m4.translate(worldMatrix, ...translation)
         worldMatrix = m4.xRotate(worldMatrix, rotation[0])
         worldMatrix = m4.yRotate(worldMatrix, rotation[1])
         worldMatrix = m4.zRotate(worldMatrix, rotation[2])
         worldMatrix = m4.scale(worldMatrix, scale[0], scale[1], scale[2])
       }
-
-      drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material);
+      drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material, focused);
     }
     requestAnimationFrame(render);
   }
