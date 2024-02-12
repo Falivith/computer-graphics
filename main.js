@@ -88,15 +88,8 @@ void main () {
 }
 `;
 
-const deploy = true;
-
 async function loadFiles(){
-
-  if (deploy){
-    const assets = await loadAssets('https://falivith.github.io/computer-graphics/assets/obj/');
-  }else{
-    const assets = await loadAssets('./assets/obj');
-  }
+  const assets = await loadAssets('./assets/obj');
 
   const models = {
     objects: assets.objResults,
@@ -122,12 +115,11 @@ async function main(models) {
   };
 
   const baseHref = new URL('./assets/obj/', window.location.href);
-  const matTexts = await Promise.all(models.objects[0].materialLibs.map(async filename => {
-    const matHref = new URL(filename, baseHref).href;
-    const response = await fetch(matHref);
-    return await response.text();
-  }));
-  const materials = parseMTL(matTexts.join('\n'));
+
+  const matHref = './assets/obj/base.mtl';
+  const response = await fetch(matHref);
+  const materialText = await response.text();
+  const materials = parseMTL(materialText);
 
   for (const material of Object.values(materials)) {
     Object.entries(material)
