@@ -89,7 +89,9 @@ void main () {
 `;
 
 async function loadFiles(){
-  const assets = await loadAssets('./assets/obj');
+  const assets = await loadAssets();
+
+  console.log(assets);
 
   const models = {
     objects: assets.objResults,
@@ -207,9 +209,9 @@ async function main(models) {
 
   const contentElem = document.querySelector('#right_bar');
   let items = [];
-  const numItems = 60;
+  const numItems = 59;
 
-  for (let i = 5; i < numItems; ++i) {
+  for (let i = 0; i < numItems; ++i) {
 
     const {bufferInfo, vao, material, name, geometries} = bufferInfosAndVAOs[i];
 

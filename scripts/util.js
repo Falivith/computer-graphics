@@ -54,8 +54,8 @@ function degToRad(d) {
     return d * Math.PI / 180;
 }
 
-async function loadAssets(url) {
-  return loadOBJandMTLFromDirectory(url)
+async function loadAssets() {
+  return loadOBJandMTLFromDirectory()
     .then(({ objResults, mtlResults }) => {
         return { objResults, mtlResults };
     })
@@ -367,33 +367,82 @@ function degToRad(deg) {
   return deg * Math.PI / 180;
 }
 
-async function loadOBJandMTLFromDirectory(directory) {
-  const baseHref = new URL(directory, window.location.href);
-  const response = await fetch(baseHref);
-  const html = await response.text();
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  const links = Array.from(doc.querySelectorAll('a'));
-  
+async function loadOBJandMTLFromDirectory() {
+  const objFiles = [
+    './assets/obj/base.obj',
+    './assets/obj/bench.obj',
+    './assets/obj/box_A.obj',
+    './assets/obj/box_B.obj',
+    './assets/obj/building_A_withoutBase.obj',
+    './assets/obj/building_A.obj',
+    './assets/obj/building_B_withoutBase.obj',
+    './assets/obj/building_B.obj',
+    './assets/obj/building_C_withoutBase.obj',
+    './assets/obj/building_C.obj',
+    './assets/obj/building_D_withoutBase.obj',    
+    './assets/obj/building_D.obj',
+    './assets/obj/building_E_withoutBase.obj',    
+    './assets/obj/building_E.obj',
+    './assets/obj/building_F_withoutBase.obj',    
+    './assets/obj/building_F.obj',
+    './assets/obj/building_G_withoutBase.obj',    
+    './assets/obj/building_G.obj',
+    './assets/obj/building_H_withoutBase.obj',    
+    './assets/obj/building_H.obj',
+    './assets/obj/bush.obj',    
+    './assets/obj/car_hatchback.obj',
+    './assets/obj/car_hatchback_wheel_front_right.obj',
+    './assets/obj/car_hatchback_wheel_front_left.obj',
+    './assets/obj/car_hatchback_wheel_rear_right.obj',
+    './assets/obj/car_hatchback_wheel_rear_left.obj',
+    './assets/obj/car_sedan.obj',
+    './assets/obj/car_sedan_wheel_front_right.obj',
+    './assets/obj/car_sedan_wheel_front_left.obj',
+    './assets/obj/car_sedan_wheel_rear_right.obj',
+    './assets/obj/car_sedan_wheel_rear_left.obj',
+    './assets/obj/car_police.obj',
+    './assets/obj/car_police_wheel_front_right.obj',
+    './assets/obj/car_police_wheel_front_left.obj',
+    './assets/obj/car_police_wheel_rear_right.obj',
+    './assets/obj/car_police_wheel_rear_left.obj',
+    './assets/obj/car_taxi.obj',
+    './assets/obj/car_taxi_wheel_front_right.obj',
+    './assets/obj/car_taxi_wheel_front_left.obj',
+    './assets/obj/car_taxi_wheel_rear_right.obj',
+    './assets/obj/car_taxi_wheel_rear_left.obj',
+    './assets/obj/car_stationwagon.obj',
+    './assets/obj/car_stationwagon_wheel_front_right.obj',
+    './assets/obj/car_stationwagon_wheel_front_left.obj',
+    './assets/obj/car_stationwagon_wheel_rear_right.obj',
+    './assets/obj/car_stationwagon_wheel_rear_left.obj',
+    './assets/obj/trafficlight_A.obj',
+    './assets/obj/trafficlight_B.obj',
+    './assets/obj/trafficlight_C.obj',
+    './assets/obj/streetlight.obj',
+    './assets/obj/road_tsplit.obj',
+    './assets/obj/road_junction.obj',
+    './assets/obj/road_corner_curved.obj',
+    './assets/obj/road_straight_crossing.obj',
+    './assets/obj/road_corner.obj',
+    './assets/obj/dumpster.obj',
+    './assets/obj/firehydrant.obj',
+    './assets/obj/watertower.obj',
+    './assets/obj/trash_B.obj',
+  ];
+
   const objPromises = [];
   const mtlPromises = [];
 
-  for (const link of links) {
-      const href = link.getAttribute('href');
-      if (href.endsWith('.obj')) {
-          const objResponse = await fetch(href);
-          const objText = await objResponse.text();
-          const obj = parseOBJ(objText);
-          objPromises.push(obj);
+  for (const objFile of objFiles) {
+    const objResponse = await fetch(objFile);
+    const objText = await objResponse.text();
+    const obj = parseOBJ(objText);
+    objPromises.push(obj);
 
-          const baseHref = new URL('./assets/obj/', window.location.href);
-          const matTexts = await Promise.all(obj.materialLibs.map(async filename => {
-              const matHref = new URL(filename, baseHref).href;
-              const matResponse = await fetch(matHref);
-              return await matResponse.text();
-          }));
-          mtlPromises.push(parseMTL(matTexts.join('\n')));
-      }
+    const mtlFile = objFile.replace('.obj', '.mtl');
+    const mtlResponse = await fetch(mtlFile);
+    const mtlText = await mtlResponse.text();
+    mtlPromises.push(parseMTL(mtlText));
   }
 
   const objResults = await Promise.all(objPromises);
