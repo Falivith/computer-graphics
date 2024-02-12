@@ -88,8 +88,15 @@ void main () {
 }
 `;
 
+const deploy = true;
+
 async function loadFiles(){
-  const assets = await loadAssets('./assets/obj');
+
+  if (deploy){
+    const assets = await loadAssets('https://falivith.github.io/computer-graphics/assets/obj/');
+  }else{
+    const assets = await loadAssets('./assets/obj');
+  }
 
   const models = {
     objects: assets.objResults,
