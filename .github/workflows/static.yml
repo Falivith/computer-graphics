@@ -29,11 +29,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2  # Use v2 of checkout action
+        uses: actions/checkout@v3  # Use v2 of checkout action
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: JamesIves/github-pages-deploy-action@3  # Use a specialized GitHub Pages deploy action
+        uses: actions/upload-pages-artifact@v1  # Use a specialized GitHub Pages deploy action
         with:
           # Path to the HTML file to deploy
           # Modify the path as needed to match your project structure
-          path: Trabalho_CG1/index.html
+          path: ./Trabalho_CG1/index.html
