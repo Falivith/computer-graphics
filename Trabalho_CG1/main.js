@@ -89,8 +89,6 @@ void main () {
 `;
 
 async function loadFiles(){
-  const vsText = await loadShader('./shaders/vs.glsl');
-  const fsText = await loadShader('./shaders/fs.glsl');
   const assets = await loadAssets('./assets/obj');
 
   const models = {
@@ -159,7 +157,6 @@ async function main(models) {
   Object.keys(models.objects).forEach(key => {
     const geometries = models.objects[key].geometries;
   
-    // Iterar sobre todas as geometrias do modelo atual
     geometries.forEach(({ material, data, object }) => {
       if (data.color && data.position.length === data.color.length) {
         data.color = { numComponents: 3, data: data.color };
@@ -170,25 +167,20 @@ async function main(models) {
       if (data.texcoord && data.normal) {
         data.tangent = generateTangents(data.position, data.texcoord);
       } else {
-        // Se não houver tangentes, definimos uma por padrão
         data.tangent = { value: [1, 0, 0] };
       }
-  
-      // Se não houver dados de coordenadas de textura, definimos uma por padrão
+
       if (!data.texcoord) {
         data.texcoord = { value: [0, 0] };
       }
   
-      // Se não houver dados de normais, geramos eles
       if (!data.normal) {
         data.normal = { value: [0, 0, 1] };
       }
   
-      // Criar buffer e VAO para os dados da geometria
       const bufferInfo = twgl.createBufferInfoFromArrays(gl, data);
       const vao = twgl.createVAOFromBufferInfo(gl, programInfo, bufferInfo);
   
-      // Adicionar informações ao array bufferInfosAndVAOs
       bufferInfosAndVAOs.push({
         material: {
           ...defaultMaterial,
@@ -211,23 +203,11 @@ async function main(models) {
     return elem;
   }
 
-  function randArrayElement(array) {
-    return array[Math.random() * array.length | 0];
-  }
-
-  function rand(min, max) {
-    if (max === undefined) {
-      max = min;
-      min = 0;
-    }
-    return Math.random() * (max - min) + min;
-  }
-
   var mainSceneObjects = [];
   var idCounter = 0;
 
   const contentElem = document.querySelector('#right_bar');
-  const items = [];
+  let items = [];
   const numItems = 60;
 
   for (let i = 5; i < numItems; ++i) {
@@ -285,6 +265,9 @@ async function main(models) {
   var rotation = [0, 0, 0];
   var scale = [1, 1, 1];
 
+  var camera = [0, 0, 0];
+  var cameraRotation = [0, 0, 0];
+
   webglLessonsUI.setupSlider("#x", {value: translation[0], slide: updatePosition(0), min: -5, max: +5, step: 0.1, precision: 2});
   webglLessonsUI.setupSlider("#y", {value: translation[1], slide: updatePosition(1), min: -5, max: +5, step: 0.1, precision: 2});
   webglLessonsUI.setupSlider("#z", {value: translation[2], slide: updatePosition(2), min: -5, max: +5, step: 0.1, precision: 2});
@@ -296,6 +279,14 @@ async function main(models) {
   webglLessonsUI.setupSlider("#scaleX", {value: scale[0], slide: updateScale(0), min: -5, max: 5, step: 0.01, precision: 2});
   webglLessonsUI.setupSlider("#scaleY", {value: scale[1], slide: updateScale(1), min: -5, max: 5, step: 0.01, precision: 2});
   webglLessonsUI.setupSlider("#scaleZ", {value: scale[2], slide: updateScale(2), min: -5, max: 5, step: 0.01, precision: 2});
+
+  webglLessonsUI.setupSlider("#cameraX", {value: camera[0], slide: updateCamera(0), min: -5, max: 5, step: 0.01, precision: 2});
+  webglLessonsUI.setupSlider("#cameraY", {value: camera[1], slide: updateCamera(1), min: -5, max: 5, step: 0.01, precision: 2});
+  webglLessonsUI.setupSlider("#cameraZ", {value: camera[2], slide: updateCamera(2), min: -5, max: 5, step: 0.01, precision: 2});
+
+  webglLessonsUI.setupSlider("#cameraAngleX", {value: cameraRotation[0], slide: updateCameraRotation(0), max: 360});
+  webglLessonsUI.setupSlider("#cameraAngleY", {value: cameraRotation[1], slide: updateCameraRotation(1), max: 360});
+  webglLessonsUI.setupSlider("#cameraAngleZ", {value: cameraRotation[2], slide: updateCameraRotation(2), max: 360});
 
   function updatePosition(index) {
     return function(event, ui) {
@@ -330,24 +321,62 @@ async function main(models) {
       };
   }
 
+  function updateCamera(index) {
+    return function(event, ui) {
+      camera[index] = ui.value;
+    };
+  }
+
+  function updateCameraRotation(index) {
+    return function(event, ui) {
+      const angleInDegrees = ui.value;
+      const angleInRadians = angleInDegrees * Math.PI / 180;
+  
+      cameraRotation[index] = angleInRadians;
+    };
+  }
+
+  const exportButton = document.getElementById('exportScene');
+  exportButton.onclick = function() {
+    exportState();
+  };
+
+  function exportState(){
+    const json = convertToJSON(items);
+    const blob = new Blob([json], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'scene.json';
+    
+    document.body.appendChild(a);
+    a.click();
+    
+    document.body.removeChild(a);
+  }
+
+  document.getElementById('fileChooser').addEventListener('change', function(event) {
+  const file = event.target.files[0];
+      if (file) {
+          handleFile(file, function(data) {
+              items = data;
+              console.log(data);
+          });
+      }
+  });
+
   function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused) {
 
-    // Clear the canvas AND the depth buffer.
     if(!focused){
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
 
-    // Make a view matrix from the camera matrix.
     const viewMatrix = m4.inverse(cameraMatrix);
 
 
     gl.useProgram(programInfo.program);
-
-    // ------ Draw the bufferInfo --------
-
-    // Setup all the needed attributes.
     gl.bindVertexArray(vao);
-    // Set the uniform
     twgl.setUniforms(programInfo, {
       u_lightDirection: m4.normalize([-1, 4, 5]),
       u_world: worldMatrix,
@@ -355,13 +384,12 @@ async function main(models) {
       u_projection: projectionMatrix,
     }, texture);
 
-    // calls gl.drawArrays or gl.drawElements
     twgl.drawBufferInfo(gl, bufferInfo);
   }
 
   function render(time) {
 
-    time *= 0.001;  // convert to seconds
+    time *= 0.001;
 
     twgl.resizeCanvasToDisplaySize(gl.canvas);
 
@@ -378,8 +406,7 @@ async function main(models) {
        element, 
        material, 
        color, 
-       geometries, 
-       name, 
+       geometries,
        focused, 
        translation,
        rotation,
@@ -415,22 +442,17 @@ async function main(models) {
         1.2,
         radius,
       ]);
-      // Set zNear and zFar to something hopefully appropriate
-      // for the size of this object.
       const near = radius / 100;
       const far = radius * 3;
 
       const aspect = width / height;
-      // Compute a perspective projection matrix
       const perspectiveProjectionMatrix =
           m4.perspective(fieldOfViewRadians, aspect, near, far);
 
-      // Compute the camera's matrix using look at.
       const target = [0, 0, 0];
       const up = [0, 1, 0];
-      const cameraMatrix = m4.lookAt(cameraPosition, target, up);
+      let cameraMatrix = m4.lookAt(cameraPosition, target, up);
 
-      // rotate the item
       const rTime = time * 0.7;
       
       let worldMatrix = m4.identity();
@@ -446,6 +468,10 @@ async function main(models) {
         worldMatrix = m4.yRotate(worldMatrix, rotation[1])
         worldMatrix = m4.zRotate(worldMatrix, rotation[2])
         worldMatrix = m4.scale(worldMatrix, scale[0], scale[1], scale[2])
+        cameraMatrix = m4.translate(cameraMatrix, camera[0], camera[1], camera[2]);
+        cameraMatrix = m4.xRotate(cameraMatrix, cameraRotation[0]);
+        cameraMatrix = m4.yRotate(cameraMatrix, cameraRotation[1]);
+        cameraMatrix = m4.zRotate(cameraMatrix, cameraRotation[2]);    
       }
       drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material, focused);
     }

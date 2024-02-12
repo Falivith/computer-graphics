@@ -4,6 +4,8 @@
     padding: 0;
     cursor: default;
     user-select: none;
+    font-family: 'Roboto', sans-serif;
+    text-shadow: #333;
 }
 
 body {
@@ -62,7 +64,9 @@ body {
     border-radius: 10px;
     padding: 10px;
     background-color: lightgray;
-    height: 50%;
+    height: 65%;
+    min-height: 350px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1); 
 }
 
 .gman-widget-outer{
@@ -88,18 +92,17 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1); 
+    border-radius: 10px;
+    padding: 10px;
+    background-color: lightgray;
+    margin-bottom: 25px;
+    height: 35%;
 }
 
 #details > h1 {
     font-size: 16;
     margin-bottom: 12px;
-}
-
-#details {
-    border-radius: 10px;
-    padding: 10px;
-    background-color: lightgray;
-    height: 50%;
 }
 
 #crudItems {
@@ -110,6 +113,7 @@ body {
     border-radius: 10px;
     overflow: auto;
     padding: 10px;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1); 
 }
 
 #crudItems > ul {
@@ -119,13 +123,69 @@ body {
 }
 
 #crudItems > ul > li {
-    text-align: start;
+    display: flex;
     margin: 5px 0;
-    padding: 5px 10px;
+    padding-left: 10px;
     border-radius: 5px; 
     background-color: #f0f0f0;
     overflow: hidden;
-    text-wrap: nowrap;
+    white-space: nowrap;
+    transition: .2s;
+}
+
+.spanContainer{
+    display: flex;
+    flex-direction: row;
+    width: 80%;
+    padding: 5px;
+    overflow: hidden;
+    align-items: center;
+}
+
+#fileChooser{
+    display: none;
+}
+
+.textSpan{
+    font-size: 12px;
+    max-width: 10px;
+    cursor: pointer;
+}
+
+.deleteButton {
+    margin: 4px;
+    margin-left: 10px;
+    height: 100%;
+    background-color: #0075ff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: .2s;
+}
+
+#exportScene, #importScene{
+    margin: 4px;
+    margin-left: 10px;
+    height: 100%;
+    background-color: #0075ff;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: .2s;
+}
+
+#exportScene:hover, #importScene:hover{
+    background-color: #02499b;
+}
+
+.deleteButton:hover {
+    background-color: #02499b; /* Cor de fundo vermelha mais escura ao passar o mouse */
 }
 
 #crudItems > ul > li:hover {
@@ -163,6 +223,9 @@ body {
 }
 
 footer {
+    align-items: center;
+    justify-content: space-between;
+    display: flex;
     font-size: 12px;
     position: fixed;
     bottom: 0;
@@ -172,4 +235,8 @@ footer {
     color: #fff;
     padding: 10px;
     text-align: center;
+}
+
+#text{
+    margin-right: 34%;
 }

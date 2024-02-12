@@ -22,7 +22,13 @@
                     <div class = "ui" id="scaleX"></div>
                     <div class = "ui" id="scaleY"></div>
                     <div class = "ui" id="scaleZ"></div>
-
+                    <div class = "ui" id="cameraX"></div>
+                    <div class = "ui" id="cameraY"></div>
+                    <div class = "ui" id="cameraZ"></div>
+                    <div class = "ui" id="cameraAngleX"></div>
+                    <div class = "ui" id="cameraAngleY"></div>
+                    <div class = "ui" id="cameraAngleZ"></div>
+                    
                 </div>
 
                 <div id="details">
@@ -40,7 +46,17 @@
             <div id="right_bar"></div>
         </div>
 
-        <footer>Trabalho 1 de Computação Gráfica (UFPEL) por Ulian Gabriel Alff Ramires</footer>
+        <footer>
+            <div>
+                <button id = "exportScene">Exportar Cena</button>
+                <button id = "importScene">Importar Cena</button>
+                <input type="file" id = "fileChooser" accept=".json"></input>                
+            </div>
+
+            <div id = "text">
+                Trabalho 1 de Computação Gráfica (UFPEL) por Ulian Gabriel Alff Ramires   
+            </div>
+        </footer>
 
         <script src="./scripts/webgl-lessons-ui.js"></script>
         <script src="./scripts/gl-matrix.js"></script>
