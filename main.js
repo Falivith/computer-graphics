@@ -240,7 +240,6 @@ async function main(models) {
 
       updateItems(items);
       updateListeners();
-      console.log(items);
     };
 
     const labelElem = createElem('div', outerElem, 'label');
@@ -341,6 +340,8 @@ async function main(models) {
     exportState();
   };
 
+  let imported = false;
+
   function exportState(){
     const json = convertToJSON(items);
     const blob = new Blob([json], {type: 'application/json'});
@@ -357,14 +358,15 @@ async function main(models) {
   }
 
   document.getElementById('fileChooser').addEventListener('change', function(event) {
-  const file = event.target.files[0];
+    items = [];
+    const file = event.target.files[0];
       if (file) {
           handleFile(file, function(data) {
               items = data;
               console.log(data);
           });
       }
-  });
+    });
 
   function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused) {
 
@@ -373,7 +375,6 @@ async function main(models) {
     }
 
     const viewMatrix = m4.inverse(cameraMatrix);
-
 
     gl.useProgram(programInfo.program);
     gl.bindVertexArray(vao);
