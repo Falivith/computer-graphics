@@ -89,6 +89,8 @@ void main () {
 `;
 
 async function loadFiles(){
+  document.getElementById('loading').style.visibility = 'visible';
+
   const assets = await loadAssets();
 
   const models = {
@@ -97,6 +99,8 @@ async function loadFiles(){
   }
 
   main(models);
+
+  document.getElementById('loading').style.visibility = 'hidden';
 }
 
 async function main(models) {
