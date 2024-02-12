@@ -36,4 +36,4 @@ jobs:
         with:
           # Path to the HTML file to deploy
           # Modify the path as needed to match your project structure
-          path: ./Trabalho_CG1
+          path: ./Trabalho_CG1/
