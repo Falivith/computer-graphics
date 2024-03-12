@@ -1,7 +1,7 @@
 "use strict";
 
 const vs = `#version 300 es
-in vec4 a_position; // Coordenadas do Modelo
+in vec4 a_position;
 in vec3 a_normal;
 in vec3 a_tangent;
 in vec2 a_texcoord;
@@ -24,7 +24,7 @@ void main() {
   v_surfaceToView = u_viewWorldPosition - worldPosition.xyz;
 
   mat3 normalMat = mat3(u_world);
-  v_normal = normalize(normalMat * a_normal);
+  v_normal = a_normal;
   v_tangent = normalize(normalMat * a_tangent);
 
   v_texcoord = a_texcoord;
@@ -50,41 +50,72 @@ uniform sampler2D specularMap;
 uniform float shininess;
 uniform sampler2D normalMap;
 uniform float opacity;
-uniform vec3 u_lightDirection;
 uniform vec3 u_ambientLight;
 
 uniform vec4 u_id;
 
+uniform float u_lights;
+
+uniform vec3 u_lightDirection;
+uniform vec3 u_directionalLightDirection;
+uniform vec3 u_directionalLightColor;
+
+uniform vec3 u_lightDirection2;
+uniform vec3 u_directionalLightDirection2;
+uniform vec3 u_directionalLightColor2;
 
 out vec4 outColor;
 
 void main () {
-  vec3 normal = normalize(v_normal) * ( float( gl_FrontFacing ) * 2.0 - 1.0 );
-  vec3 tangent = normalize(v_tangent) * ( float( gl_FrontFacing ) * 2.0 - 1.0 );
+  vec3 normal = normalize(v_normal) * (float(gl_FrontFacing) * 2.0 - 1.0);
+  vec3 tangent = normalize(v_tangent) * (float(gl_FrontFacing) * 2.0 - 1.0);
   vec3 bitangent = normalize(cross(normal, tangent));
 
   mat3 tbn = mat3(tangent, bitangent, normal);
-  normal = texture(normalMap, v_texcoord).rgb * 2. - 1.;
+  normal = texture(normalMap, v_texcoord).rgb * 2.0 - 1.0;
   normal = normalize(tbn * normal);
 
   vec3 surfaceToViewDirection = normalize(v_surfaceToView);
   vec3 halfVector = normalize(u_lightDirection + surfaceToViewDirection);
 
-  float fakeLight = dot(u_lightDirection, normal) * .5 + .5;
-  float specularLight = clamp(dot(normal, halfVector), 0.0, 1.0);
+  vec3 surfaceToLightDirection = normalize(u_directionalLightDirection);
+  float fakeLight = max(dot(surfaceToLightDirection, normal), 0.0);
+
+  float specularLight = pow(max(dot(normal, halfVector), 0.0), shininess);
+
   vec4 specularMapColor = texture(specularMap, v_texcoord);
-  vec3 effectiveSpecular = specular * specularMapColor.rgb;
+  vec3 effectiveSpecular = vec3(1.0);
 
   vec4 diffuseMapColor = texture(diffuseMap, v_texcoord);
   vec3 effectiveDiffuse = diffuse * diffuseMapColor.rgb * v_color.rgb;
   float effectiveOpacity = opacity * diffuseMapColor.a * v_color.a;
 
+  vec3 directionalLight = u_directionalLightColor * fakeLight;
+
+  if (u_lights == 0.0) {
+    directionalLight = u_directionalLightColor;
+    effectiveSpecular = vec3(0.0);
+  }
+
+  vec3 specularLightColor = u_directionalLightColor * specularLight;
+
+  // Second directional light calculations
+  vec3 surfaceToLightDirection2 = normalize(u_directionalLightDirection2);
+  float fakeLight2 = max(dot(surfaceToLightDirection2, normal), 0.0);
+  float specularLight2 = pow(max(dot(normal, halfVector), 0.0), shininess);
+  vec3 directionalLight2 = u_directionalLightColor2 * fakeLight2;
+  vec3 specularLightColor2 = u_directionalLightColor2 * specularLight2;
+
+  // Combine the contributions from both directional lights
+  vec3 totalDirectionalLight = directionalLight + directionalLight2;
+  vec3 totalSpecularLightColor = specularLightColor + specularLightColor2;
+
   outColor = vec4(
-      emissive +
-      ambient * u_ambientLight +
-      effectiveDiffuse * fakeLight +
-      effectiveSpecular * pow(specularLight, shininess),
-      effectiveOpacity);
+    emissive +
+    ambient * u_ambientLight +
+    effectiveDiffuse * totalDirectionalLight +
+    effectiveSpecular * totalSpecularLightColor,
+    effectiveOpacity);
 }
 `;
 
@@ -140,18 +171,19 @@ async function main(models) {
   }
 
   Object.values(materials).forEach(m => {
-    m.shininess = 15;
-    m.specular = [3, 2, 1];
+    m.shininess = 10;
+    m.specular = [1, 1, 1];
+    m.ambient =  [0.3, 0.3, 0.3];
   });
 
   const defaultMaterial = {
     diffuse: [1, 1, 1],
     diffuseMap: textures.defaultWhite,
     normalMap: textures.defaultNormal,
-    ambient: [0, 0, 0],
+    ambient: [0.3, 0.3, 0.3],
     specular: [1, 1, 1],
-    specularMap: textures.defaultWhite,
-    shininess: 400,
+    specularMap: [0.5, 0.5, 0.5],
+    shininess: 15,
     opacity: 1,
   };
 
@@ -242,7 +274,6 @@ async function main(models) {
       });
 
       updateItems(items);
-      console.log(items);
       updateListeners();
     };
 
@@ -290,6 +321,26 @@ async function main(models) {
   webglLessonsUI.setupSlider("#cameraAngleX", {value: cameraRotation[0], slide: updateCameraRotation(0), max: 360});
   webglLessonsUI.setupSlider("#cameraAngleY", {value: cameraRotation[1], slide: updateCameraRotation(1), max: 360});
   webglLessonsUI.setupSlider("#cameraAngleZ", {value: cameraRotation[2], slide: updateCameraRotation(2), max: 360});
+
+  let lightSpeed = 0.5;
+
+  webglLessonsUI.setupSlider("#SpinSpeed", {value: lightSpeed, slide: updateCameraSpeed(), max: 20});
+
+  const toggleLightsSwitch = document.getElementById('turnOn');
+  const spin360Switch = document.getElementById('spin360');
+  const secondLightSwitch = document.getElementById('secondLight');
+  const thirdLightSwitch = document.getElementById('thirdLight');
+
+  let light;
+  let spin;
+  let secondLight;
+  let thirdLight;
+  
+  function updateCameraSpeed(index) {
+    return function(event, ui) {
+      lightSpeed = ui.value;
+    };
+  }
 
   function updatePosition(index) {
     return function(event, ui) {
@@ -367,12 +418,10 @@ async function main(models) {
   }
 
   document.getElementById('fileChooser').addEventListener('change', function(event) {
-    console.log('blau');
     const file = event.target.files[0];
     if (file) {
         readAsJSON(file)
             .then(data => {
-                console.log(data);
                 importState(data, bufferInfosAndVAOs, items);
             })
             .catch(error => {
@@ -385,22 +434,49 @@ async function main(models) {
 
   });
 
-  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused) {
+  function updateLightDirection(time) {
+    const angle = time;
+    const x = Math.cos(angle);
+    const y = 0;
+    const z = Math.sin(angle);
 
-    if(!focused){
+    const length = Math.sqrt(x * x + y * y + z * z);
+    return [x / length, y / length, z / length];
+  }
+
+  function drawScene(projectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, texture, focused, lightDirection, lights = true) {
+    if (!focused) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     }
 
     const viewMatrix = m4.inverse(cameraMatrix);
+    const directionalLightColor = [1, 1, 1]; // Cor da luz direcional
 
-    gl.useProgram(programInfo.program);
-    gl.bindVertexArray(vao);
-    twgl.setUniforms(programInfo, {
-      u_lightDirection: m4.normalize([-1, 4, 5]),
+    // Crie a matriz de transformação completa aplicada ao mundo
+    const worldViewMatrix = m4.multiply(viewMatrix, worldMatrix);
+    const normalMatrix = m4.inverse(m4.transpose(worldViewMatrix));
+
+    const lightsValue = lights ? 1 : 0;
+
+    const uniforms = {
+      u_directionalLightDirection: lightDirection,
+      u_directionalLightDirection2: [-1, -1, -1],
+      
+      u_directionalLightColor: directionalLightColor,
+      u_directionalLightColor2: [1, 1, 1],
+      
+      u_lights: lightsValue,
+
       u_world: worldMatrix,
       u_view: viewMatrix,
       u_projection: projectionMatrix,
-    }, texture);
+      u_normalMatrix: normalMatrix,
+    };
+
+    gl.useProgram(programInfo.program);
+    gl.bindVertexArray(vao);
+
+    twgl.setUniforms(programInfo, uniforms, texture);
 
     twgl.drawBufferInfo(gl, bufferInfo);
   }
@@ -491,7 +567,26 @@ async function main(models) {
         cameraMatrix = m4.yRotate(cameraMatrix, cameraRotation[1]);
         cameraMatrix = m4.zRotate(cameraMatrix, cameraRotation[2]);    
       }
-      drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material, focused);
+
+      let lightDirection;
+      light = toggleLightsSwitch.checked;
+      spin = spin360Switch.checked;
+      secondLight = secondLightSwitch.checked;
+      thirdLight = thirdLightSwitch.checked;
+
+      if (spin) {
+          lightDirection = updateLightDirection(time * lightSpeed);
+      } else {
+          lightDirection = [1, 1, 1];
+      }
+
+      if (light){
+        drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material, focused, lightDirection, true);
+      }
+      else{
+        drawScene(perspectiveProjectionMatrix, cameraMatrix, worldMatrix, bufferInfo, vao, material, focused, lightDirection, false);        
+      }
+
     }
     requestAnimationFrame(render);
   }
