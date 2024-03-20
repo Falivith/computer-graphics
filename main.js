@@ -75,10 +75,10 @@ void main () {
   normal = texture(normalMap, v_texcoord).rgb * 2.0 - 1.0;
   normal = normalize(tbn * normal);
 
+  vec3 surfaceToLightDirection = normalize(u_directionalLightDirection);
   vec3 surfaceToViewDirection = normalize(v_surfaceToView);
   vec3 halfVector = normalize(u_lightDirection + surfaceToViewDirection);
 
-  vec3 surfaceToLightDirection = normalize(u_directionalLightDirection);
   float fakeLight = max(dot(surfaceToLightDirection, normal), 0.0);
 
   float specularLight = pow(max(dot(normal, halfVector), 0.0), shininess);
@@ -321,6 +321,14 @@ async function main(models) {
   webglLessonsUI.setupSlider("#cameraAngleX", {value: cameraRotation[0], slide: updateCameraRotation(0), max: 360});
   webglLessonsUI.setupSlider("#cameraAngleY", {value: cameraRotation[1], slide: updateCameraRotation(1), max: 360});
   webglLessonsUI.setupSlider("#cameraAngleZ", {value: cameraRotation[2], slide: updateCameraRotation(2), max: 360});
+
+  webglLessonsUI.setupSlider("#lightxp", {value: cameraRotation[0], slide: updateCameraRotation(0), max: 2});
+  webglLessonsUI.setupSlider("#lightyp", {value: cameraRotation[1], slide: updateCameraRotation(1), max: 2});
+  webglLessonsUI.setupSlider("#lightzp", {value: cameraRotation[2], slide: updateCameraRotation(2), max: 2});
+
+  webglLessonsUI.setupSlider("#lightxn", {value: cameraRotation[0], slide: updateCameraRotation(0), max: 360});
+  webglLessonsUI.setupSlider("#lightyn", {value: cameraRotation[1], slide: updateCameraRotation(1), max: 360});
+  webglLessonsUI.setupSlider("#lightzn", {value: cameraRotation[2], slide: updateCameraRotation(2), max: 360});
 
   let lightSpeed = 0.5;
 
